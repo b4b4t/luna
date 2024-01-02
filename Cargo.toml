@@ -1,0 +1,20 @@
+[package]
+name = "luna"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.4.11", features = ["derive"] }
+dotenv = "0.15.0"
+tiberius = { version = "0.12.2", features = [
+    "vendored-openssl",
+], default-features = false }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9.29"
+surrealdb = { version = "1.0.2", features = ["kv-rocksdb"] }
+[dependencies.async-std]
+version = "1.11.0"
+features = ["attributes"]
