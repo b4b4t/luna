@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
     tables: Vec<Table>,
 }
@@ -15,7 +15,7 @@ impl Model {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
     name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -38,9 +38,17 @@ impl Table {
             columns: vec![],
         }
     }
+
+    pub fn get_table_name(&self) -> &str {
+        return &self.name;
+    }
+
+    pub fn add_column(&mut self, column: Column) {
+        self.columns.push(column);
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Column {
     column_name: String,
     table_name: String,
@@ -66,5 +74,15 @@ impl Column {
         }
     }
 
-    pub fn get_name() -> String {}
+    pub fn get_column_name(&self) -> &str {
+        return &self.column_name;
+    }
+
+    pub fn get_table_name(&self) -> &str {
+        return &self.column_name;
+    }
+
+    pub fn get_type_name(&self) -> &str {
+        return &self.column_name;
+    }
 }

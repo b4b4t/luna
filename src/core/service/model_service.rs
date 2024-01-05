@@ -35,8 +35,21 @@ impl ModelService {
         Ok(())
     }
 
-    /// Read a model file
-    pub fn read_model(model_name: String) -> anyhow::Result<Model> {
+    pub fn check_model(model_name: String) -> anyhow::Result<()> {
+        // Get db model
+        let db_model = ModelService::build_model_from_database().await?;
+        // Get file model
+        let file_model = ModelService::read_model_from_file(model_name).await?;
+
+        // Check tables
+
+        // Check columns
+
+        Ok(())
+    }
+
+    /// Read a model from a file
+    pub fn read_model_from_file(model_name: String) -> anyhow::Result<Model> {
         let model_dir_path = env::var("MODEL_PATH").expect("CONNECTION_STRING must be set");
         let model_path = format!("{}/{}.yml", model_dir_path, model_name);
         let file = std::fs::File::open(model_path).expect("Could not open file.");
@@ -45,16 +58,27 @@ impl ModelService {
         Ok(model)
     }
 
-    pub async fn build_model(model: &mut Model) -> anyhow::Result<()> {
-        let tables = get_tables().await?;
+    /// Build a model from a database
+    pub async fn build_model_from_database() -> anyhow::Result<Model> {
+        let mut tables = get_tables().await?;
         let columns = get_columns().await?;
 
+        // Add columns in tables
         for column in columns {
-            for table in tables {
-                if column.
+            for table in tables.as_mut_slice() {
+                if column.get_table_name() == table.get_table_name() {
+                    table.add_column(column.clone());
+                }
             }
         }
 
-        Ok(())
+        let mut model = Model::new();
+
+        // Add tables in the model
+        for table in tables {
+            model.add(table);
+        }
+
+        Ok(model)
     }
 }
