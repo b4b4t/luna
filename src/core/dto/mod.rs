@@ -1,17 +1,37 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
-    tables: Vec<Table>,
+    tables: HashMap<String, Table>,
 }
 
 impl Model {
     pub fn new() -> Self {
-        Self { tables: vec![] }
+        Self {
+            tables: HashMap::new(),
+        }
     }
 
     pub fn add(&mut self, table: Table) {
-        let _ = &self.tables.push(table);
+        let _ = &self
+            .tables
+            .insert(table.get_table_name().to_string(), table);
+    }
+
+    pub fn get(&self, table_name: &str) -> Option<Table> {
+        let tables = self.tables;
+
+        if tables.contains_key(table_name) {
+            return Some(tables[table_name]);
+        }
+
+        None
+    }
+
+    pub fn get_tables_iter(&self) -> std::collections::hash_map::Values<'_, String, Table> {
+        self.tables.values()
     }
 }
 

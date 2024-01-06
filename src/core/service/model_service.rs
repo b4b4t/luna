@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     env,
     fs::{self, OpenOptions},
 };
@@ -35,13 +36,21 @@ impl ModelService {
         Ok(())
     }
 
-    pub fn check_model(model_name: String) -> anyhow::Result<()> {
+    pub async fn check_model(model_name: String) -> anyhow::Result<()> {
         // Get db model
         let db_model = ModelService::build_model_from_database().await?;
         // Get file model
-        let file_model = ModelService::read_model_from_file(model_name).await?;
+        let file_model = ModelService::read_model_from_file(model_name)?;
 
-        // Check tables
+        // Check tables present in the file
+        for table in file_model.get_tables_iter() {
+            let db_table = db_model.get(table.get_table_name());
+
+            match db_table {
+                Some(t) => {}
+                None => println!("Misssing {} table in database", table.get_table_name()),
+            }
+        }
 
         // Check columns
 
