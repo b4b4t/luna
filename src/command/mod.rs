@@ -11,7 +11,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Import,
-    Export,
+    Export(ModelArgs),
     Fetch(ModelArgs),
 }
 

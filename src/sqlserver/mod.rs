@@ -31,8 +31,6 @@ pub async fn get_tables() -> anyhow::Result<Vec<Table>> {
 
     for row in rows {
         let name: &str = row.get("name").unwrap();
-        println!("Table : {}", name);
-
         tables.push(Table::new(name.to_string()));
     }
 
@@ -56,10 +54,10 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
         let type_name: &str = row.get("type_name").unwrap();
         let precision: u8 = row.get("precision").unwrap();
         let max_length: i16 = row.get("max_length").unwrap();
-        println!(
-            "Column : {}.{} {} ({},{})",
-            table_name, column_name, type_name, max_length, precision
-        );
+        // println!(
+        //     "Column : {}.{} {} ({},{})",
+        //     table_name, column_name, type_name, max_length, precision
+        // );
 
         columns.push(Column::new(
             column_name.to_string(),

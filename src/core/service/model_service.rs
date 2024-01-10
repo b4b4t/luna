@@ -1,11 +1,11 @@
 use std::{
-    collections::HashMap,
     env,
     fs::{self, OpenOptions},
 };
 
 use crate::{
-    core::dto::Model,
+    core::dto::{Column, Model},
+    println_error, println_success,
     sqlserver::{get_columns, get_tables},
 };
 
@@ -42,17 +42,44 @@ impl ModelService {
         // Get file model
         let file_model = ModelService::read_model_from_file(model_name)?;
 
+        println!("Checking tables :");
         // Check tables present in the file
         for table in file_model.get_tables_iter() {
             let db_table = db_model.get(table.get_table_name());
 
             match db_table {
-                Some(t) => {}
-                None => println!("Misssing {} table in database", table.get_table_name()),
+                Some(t) => {
+                    let table_name = t.get_table_name();
+                    println_success!("{} -> Ok", table_name);
+
+                    // Check columns
+                    let columns = table.get_columns_iter();
+                    if columns.is_some() {
+                        for column in columns.unwrap() {
+                            let db_column = table.get_column(column.get_column_name());
+                            match db_column {
+                                Some(c) => {
+                                    println_success!(
+                                        "{} -- {} -> Ok",
+                                        table_name,
+                                        c.get_column_name()
+                                    );
+                                }
+                                None => println_error!(
+                                    "{} -- {} -> Ko : Missing column in database",
+                                    table_name,
+                                    column.get_column_name()
+                                ),
+                            }
+                        }
+                    }
+                }
+                None => println_error!(
+                    "{} -> Ko : Missing table in database",
+                    table.get_table_name()
+                ),
             }
         }
-
-        // Check columns
 
         Ok(())
     }
@@ -73,10 +100,11 @@ impl ModelService {
         let columns = get_columns().await?;
 
         // Add columns in tables
-        for column in columns {
-            for table in tables.as_mut_slice() {
+        for table in tables.as_mut_slice() {
+            let mut t_columns: Vec<Column> = Vec::new();
+            for column in &columns {
                 if column.get_table_name() == table.get_table_name() {
-                    table.add_column(column.clone());
+                    t_columns.push(column.clone());
                 }
             }
         }

@@ -21,10 +21,10 @@ impl Model {
     }
 
     pub fn get(&self, table_name: &str) -> Option<Table> {
-        let tables = self.tables;
+        let tables = &self.tables;
 
         if tables.contains_key(table_name) {
-            return Some(tables[table_name]);
+            return Some(tables[table_name].clone());
         }
 
         None
@@ -44,8 +44,8 @@ pub struct Table {
     take: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     skip: Option<u64>,
-    #[serde(skip_serializing)]
-    columns: Vec<Column>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    columns: Option<HashMap<String, Column>>,
 }
 
 impl Table {
@@ -55,7 +55,7 @@ impl Table {
             condition: None,
             skip: None,
             take: None,
-            columns: vec![],
+            columns: None,
         }
     }
 
@@ -63,8 +63,38 @@ impl Table {
         return &self.name;
     }
 
-    pub fn add_column(&mut self, column: Column) {
-        self.columns.push(column);
+    pub fn add_columns(&mut self, columns: Vec<Column>) {
+        let mut cols: HashMap<String, Column> = HashMap::new();
+
+        for col in columns {
+            cols.insert(col.get_table_name().to_string(), col);
+        }
+
+        self.columns = Some(cols);
+    }
+
+    pub fn get_columns_iter(
+        &self,
+    ) -> Option<std::collections::hash_map::Values<'_, String, Column>> {
+        if self.columns.is_none() {
+            return None;
+        }
+
+        Some(self.columns.as_ref().unwrap().values())
+    }
+
+    pub fn get_column(&self, column_name: &str) -> Option<Column> {
+        if self.columns.is_none() {
+            return None;
+        }
+
+        let columns = self.columns.as_ref().unwrap();
+
+        if columns.contains_key(column_name) {
+            return Some(columns[column_name].clone());
+        }
+
+        None
     }
 }
 
