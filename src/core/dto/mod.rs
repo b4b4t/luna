@@ -4,12 +4,14 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
+    name: String,
     tables: HashMap<String, Table>,
 }
 
 impl Model {
-    pub fn new() -> Self {
+    pub fn new(model_name: &str) -> Self {
         Self {
+            name: model_name.to_string(),
             tables: HashMap::new(),
         }
     }
@@ -105,6 +107,7 @@ pub struct Column {
     type_name: String,
     precision: u8,
     max_length: i16,
+    foreign_key: Option<ForeignKey>,
 }
 
 impl Column {
@@ -114,6 +117,7 @@ impl Column {
         type_name: String,
         precision: u8,
         max_length: i16,
+        foreign_key: Option<ForeignKey>,
     ) -> Self {
         Self {
             column_name,
@@ -121,6 +125,7 @@ impl Column {
             type_name,
             precision,
             max_length,
+            foreign_key,
         }
     }
 
@@ -134,5 +139,30 @@ impl Column {
 
     pub fn get_type_name(&self) -> &str {
         return &self.column_name;
+    }
+
+    pub fn is_foreign_key(&self) -> bool {
+        return self.foreign_key.is_some();
+    }
+
+    pub fn get_foreign_key(&self) -> Option<&ForeignKey> {
+        return self.foreign_key.as_ref();
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ForeignKey {
+    column_name: String,
+    table_name: String,
+    type_name: String,
+}
+
+impl ForeignKey {
+    pub fn new(column_name: String, table_name: String, type_name: String) -> Self {
+        Self {
+            column_name,
+            table_name,
+            type_name,
+        }
     }
 }

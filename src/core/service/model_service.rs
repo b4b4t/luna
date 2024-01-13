@@ -13,12 +13,12 @@ pub struct ModelService;
 
 impl ModelService {
     /// Generate a model file with a database
-    pub async fn generate_model(model_name: String) -> anyhow::Result<()> {
+    pub async fn generate_model(model_name: &str) -> anyhow::Result<()> {
         let model_path = env::var("MODEL_PATH").expect("CONNECTION_STRING must be set");
 
         fs::create_dir_all(&model_path)?;
 
-        let mut model = Model::new();
+        let mut model: Model = Model::new(model_name);
         let tables = get_tables().await?;
         for table in tables {
             model.add(table);
@@ -36,9 +36,9 @@ impl ModelService {
         Ok(())
     }
 
-    pub async fn check_model(model_name: String) -> anyhow::Result<()> {
+    pub async fn check_model(model_name: &str) -> anyhow::Result<()> {
         // Get db model
-        let db_model = ModelService::build_model_from_database().await?;
+        let db_model = ModelService::build_model_from_database(model_name).await?;
         // Get file model
         let file_model = ModelService::read_model_from_file(model_name)?;
 
@@ -85,7 +85,7 @@ impl ModelService {
     }
 
     /// Read a model from a file
-    pub fn read_model_from_file(model_name: String) -> anyhow::Result<Model> {
+    pub fn read_model_from_file(model_name: &str) -> anyhow::Result<Model> {
         let model_dir_path = env::var("MODEL_PATH").expect("CONNECTION_STRING must be set");
         let model_path = format!("{}/{}.yml", model_dir_path, model_name);
         let file = std::fs::File::open(model_path).expect("Could not open file.");
@@ -95,7 +95,7 @@ impl ModelService {
     }
 
     /// Build a model from a database
-    pub async fn build_model_from_database() -> anyhow::Result<Model> {
+    pub async fn build_model_from_database(model_name: &str) -> anyhow::Result<Model> {
         let mut tables = get_tables().await?;
         let columns = get_columns().await?;
 
@@ -109,7 +109,7 @@ impl ModelService {
             }
         }
 
-        let mut model = Model::new();
+        let mut model = Model::new(model_name);
 
         // Add tables in the model
         for table in tables {
@@ -118,4 +118,6 @@ impl ModelService {
 
         Ok(model)
     }
+
+    pub async fn export_data(model: Model) -> anyhow::Result<()> {}
 }
