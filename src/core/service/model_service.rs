@@ -6,7 +6,10 @@ use std::{
 use crate::{
     core::dto::{Column, Model},
     println_error, println_success,
-    sqlserver::{get_columns, get_tables},
+    sqlserver::{
+        get_columns, get_tables,
+        query_builder::{DataQueryBuilder, Query},
+    },
 };
 
 pub struct ModelService;
@@ -119,5 +122,21 @@ impl ModelService {
         Ok(model)
     }
 
-    pub async fn export_data(model: Model) -> anyhow::Result<()> {}
+    pub async fn export_data(model: &Model) -> anyhow::Result<()> {
+        // Get data from model
+        model.get_tables_iter().for_each(|t| {
+            // Create query
+            let columns = t
+                .get_columns_iter()
+                .expect("Columns must be fetched")
+                .map(|c| c.get_column_name().to_string())
+                .collect::<Vec<String>>();
+
+            let query = DataQueryBuilder::new(t.get_table_name(), &columns).build();
+
+            // Fetch data
+        });
+
+        Ok(())
+    }
 }

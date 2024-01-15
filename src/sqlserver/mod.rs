@@ -4,6 +4,8 @@ use tiberius::{Client, Config};
 
 use crate::core::dto::{Column, ForeignKey, Table};
 
+pub mod query_builder;
+
 pub fn get_connection_string() -> String {
     env::var("CONNECTION_STRING").expect("CONNECTION_STRING must be set")
 }
@@ -47,17 +49,22 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
             p.name as type_name, 
             p.[precision], 
             p.max_length,
-
+            col2.column_id,
+            col2.name as fk_col_name,
+            tab2.name as fk_table_name,
+            typ2.name as fk_type_name
         from sys.columns c 
         join sys.tables t on t.object_id = c.object_id 
-        join sys.types as p on c.system_type_id = p.system_type_id 
-        left join sys.foreign_key_columns fkc on 
-        left join sys.tables tab1
-            on tab1.object_id = fkc.parent_object_id
-        left join sys.schemas sch1
-            on tab1.schema_id = sch1.schema_id
-        left join sys.columns col1
-            on col1.column_id = parent_column_id AND col1.object_id = tab1.object_id
+        join sys.types as p on c.user_type_id = p.user_type_id 
+        left join sys.foreign_key_columns fkc on fkc.parent_column_id = c.column_id and fkc.parent_object_id = c.object_id
+        left join sys.tables tab2
+            on tab2.object_id = fkc.referenced_object_id
+        left join sys.schemas sch2
+            on tab2.schema_id = sch2.schema_id
+        left join sys.columns col2
+            on col2.column_id = fkc.referenced_column_id AND col2.object_id = tab2.object_id
+        left join sys.types as typ2 
+            on col2.user_type_id = typ2.user_type_id 
         where t.type_desc = 'USER_TABLE' 
         order by table_name, column_name";
 
@@ -81,7 +88,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
         //     table_name, column_name, type_name, max_length, precision
         // );
         let foreign_key = match fk_col_name {
-            Some(col_name) => Some(ForeignKey::new(
+            Some(_) => Some(ForeignKey::new(
                 fk_col_name.unwrap().to_string(),
                 fk_table_name.unwrap().to_string(),
                 fk_type_name.unwrap().to_string(),
@@ -99,4 +106,17 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
     }
 
     Ok(columns)
+}
+
+pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<String>> {
+    let mut client = get_client().await?;
+    let rows = client
+        .query(query, &[&1i32])
+        .await?
+        .into_first_result()
+        .await?;
+
+    for row in rows {
+        for col in row {}
+    }
 }
