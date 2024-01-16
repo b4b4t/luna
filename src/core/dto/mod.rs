@@ -48,6 +48,8 @@ pub struct Table {
     skip: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     columns: Option<HashMap<String, Column>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rows: Option<Vec<ColumnValue>>,
 }
 
 impl Table {
@@ -58,6 +60,7 @@ impl Table {
             skip: None,
             take: None,
             columns: None,
+            rows: None,
         }
     }
 
@@ -165,4 +168,16 @@ impl ForeignKey {
             type_name,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ColumnValue {
+    Bool(Option<bool>),
+    Short(Option<i16>),
+    Integer(Option<i32>),
+    UnsignedInt(Option<u8>),
+    Float(Option<f32>),
+    BigFloat(Option<f64>),
+    Long(Option<i64>),
+    String(Option<String>),
 }

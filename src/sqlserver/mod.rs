@@ -1,8 +1,11 @@
 use async_std::net::TcpStream;
-use std::env;
-use tiberius::{Client, Config};
+use std::{any::Any, collections::HashMap, env};
+use tiberius::{Client, ColumnData, Config};
 
-use crate::core::dto::{Column, ForeignKey, Table};
+use crate::{
+    core::dto::{Column, ColumnValue, ForeignKey, Table},
+    println_error,
+};
 
 pub mod query_builder;
 
@@ -108,7 +111,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
     Ok(columns)
 }
 
-pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<String>> {
+pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<ColumnValue>> {
     let mut client = get_client().await?;
     let rows = client
         .query(query, &[&1i32])
@@ -116,7 +119,35 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<String>> {
         .into_first_result()
         .await?;
 
+    let mut data: Vec<ColumnValue> = Vec::new();
     for row in rows {
-        for col in row {}
+        for col in row {
+            data.push(to_column_value(col));
+        }
+    }
+
+    Ok(data)
+}
+
+fn to_column_value(column_data: ColumnData) -> anyhow::Result<ColumnValue> {
+    match column_data {
+        ColumnData::Bit(value) => Ok(ColumnValue::Bool(value)),
+        ColumnData::F32(value) => Ok(ColumnValue::Float(value)),
+        ColumnData::F64(value) => Ok(ColumnValue::BigFloat(value)),
+        ColumnData::I16(value) => Ok(ColumnValue::Short(value)),
+        ColumnData::I32(value) => Ok(ColumnValue::Integer(value)),
+        ColumnData::I64(value) => Ok(ColumnValue::Long(value)),
+        ColumnData::U8(value) => Ok(ColumnValue::UnsignedInt(value)),
+        ColumnData::String(value) => {
+            let string_value = match value {
+                Some(cow_value) => Some(cow_value.to_string()),
+                None => None,
+            };
+
+            Ok(ColumnValue::String(string_value))
+        }
+        _ => {
+            println_error!("not handled");
+        }
     }
 }
