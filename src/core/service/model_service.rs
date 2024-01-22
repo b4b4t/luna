@@ -7,7 +7,7 @@ use crate::{
     core::dto::{Column, Model},
     println_error, println_success,
     sqlserver::{
-        get_columns, get_tables,
+        execute_data_query, get_columns, get_tables,
         query_builder::{DataQueryBuilder, Query},
     },
 };
@@ -123,8 +123,10 @@ impl ModelService {
     }
 
     pub async fn export_data(model: &Model) -> anyhow::Result<()> {
+        // Save model
+
         // Get data from model
-        model.get_tables_iter().for_each(|t| {
+        for t in model.get_tables_iter() {
             // Create query
             let columns = t
                 .get_columns_iter()
@@ -135,7 +137,10 @@ impl ModelService {
             let query = DataQueryBuilder::new(t.get_table_name(), &columns).build();
 
             // Fetch data
-        });
+            let data = execute_data_query(&query).await?;
+
+            // Save data
+        }
 
         Ok(())
     }

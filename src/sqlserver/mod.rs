@@ -120,9 +120,18 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<ColumnValue>>
         .await?;
 
     let mut data: Vec<ColumnValue> = Vec::new();
+    let mut line = 0;
     for row in rows {
+        line = line + 1;
+        let mut column = 0;
         for col in row {
-            data.push(to_column_value(col));
+            column = column + 1;
+            match to_column_value(col) {
+                Ok(value) => {
+                    data.push(value);
+                }
+                Err(error) => println_error!("[{}][{}] : {}", line, column, error),
+            }
         }
     }
 
@@ -146,8 +155,6 @@ fn to_column_value(column_data: ColumnData) -> anyhow::Result<ColumnValue> {
 
             Ok(ColumnValue::String(string_value))
         }
-        _ => {
-            println_error!("not handled");
-        }
+        _ => Err(anyhow::anyhow!("Column data not handled")),
     }
 }
