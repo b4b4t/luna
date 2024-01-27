@@ -3,8 +3,11 @@ use std::{
     fs::{self, OpenOptions},
 };
 
+use chrono::{DateTime, Local};
+use surrealdb::{engine::local::Db, Surreal};
+
 use crate::{
-    core::dto::{Column, Model},
+    core::dto::{Column, ForeignKey, Model},
     println_error, println_success,
     sqlserver::{
         execute_data_query, get_columns, get_tables,
@@ -122,8 +125,12 @@ impl ModelService {
         Ok(model)
     }
 
-    pub async fn export_data(model: &Model) -> anyhow::Result<()> {
+    pub async fn export_data(db: &Surreal<Db>, model: &Model) -> anyhow::Result<()> {
+        let current: DateTime<Local> = Local::now();
+        let snapshot_name = current.format("%Y-%m-%d_%H:%M:%S").to_string();
+
         // Save model
+        let record: Option<Vec<Model>> = db.create(("model", snapshot_name)).content(model).await?;
 
         // Get data from model
         for t in model.get_tables_iter() {

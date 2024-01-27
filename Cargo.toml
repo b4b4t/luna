@@ -17,6 +17,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.29"
 surrealdb = { version = "1.0.2", features = ["kv-rocksdb"] }
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
+chrono = "0.4"
 [dependencies.async-std]
 version = "1.11.0"
 features = ["attributes"]

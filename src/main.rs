@@ -1,5 +1,6 @@
 use clap::Parser;
 use command::{Cli, Commands};
+use core::dto::Model;
 use core::service::model_service::ModelService;
 use dotenv::dotenv;
 use surrealdb::engine::local::RocksDb;
@@ -17,7 +18,8 @@ async fn main() -> anyhow::Result<()> {
 
     // Create database connection
     let config = Config::default().strict();
-    let db = Surreal::new::<RocksDb>(("~/luna.db", config)).await?;
+    let db: Surreal<surrealdb::engine::local::Db> =
+        Surreal::new::<RocksDb>(("~/luna.db", config)).await?;
 
     // Select a specific namespace / database
     db.use_ns("luna").use_db("luna").await?;
@@ -29,8 +31,9 @@ async fn main() -> anyhow::Result<()> {
             println!("Export");
         }
         Commands::Export(model_args) => {
-            let model_name = model_args.model.clone();
-            ModelService::check_model(&model_name.unwrap()).await?;
+            let model_name = model_args.model.clone().unwrap();
+            ModelService::check_model(&model_name).await?;
+            ModelService::export_data(&db, &Model::new(&model_name)).await?;
         }
         Commands::Fetch(model_args) => {
             let model_name = model_args.model.clone();

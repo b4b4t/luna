@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
@@ -155,14 +156,16 @@ impl Column {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ForeignKey {
-    column_name: String,
-    table_name: String,
-    type_name: String,
+    pub id: Option<String>,
+    pub column_name: String,
+    pub table_name: String,
+    pub type_name: String,
 }
 
 impl ForeignKey {
     pub fn new(column_name: String, table_name: String, type_name: String) -> Self {
         Self {
+            id: None,
             column_name,
             table_name,
             type_name,
