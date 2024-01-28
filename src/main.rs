@@ -1,10 +1,10 @@
 use clap::Parser;
 use command::{Cli, Commands};
-use core::dto::Model;
+use core::dto::model::Model;
 use core::service::model_service::ModelService;
 use dotenv::dotenv;
 use surrealdb::engine::local::RocksDb;
-use surrealdb::opt::Config;
+// use surrealdb::opt::Config;
 use surrealdb::Surreal;
 
 mod command;
@@ -17,10 +17,10 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Create database connection
-    let config = Config::default().strict();
-    let db: Surreal<surrealdb::engine::local::Db> =
-        Surreal::new::<RocksDb>(("~/luna.db", config)).await?;
-
+    // let config = Config::default().strict();
+    // let db: Surreal<surrealdb::engine::local::Db> =
+    // Surreal::new::<RocksDb>(("~/luna.db", config)).await?;
+    let db: Surreal<surrealdb::engine::local::Db> = Surreal::new::<RocksDb>("~/luna.db").await?;
     // Select a specific namespace / database
     db.use_ns("luna").use_db("luna").await?;
 
@@ -38,6 +38,17 @@ async fn main() -> anyhow::Result<()> {
         Commands::Fetch(model_args) => {
             let model_name = model_args.model.clone();
             ModelService::generate_model(&model_name.unwrap()).await?;
+        }
+        Commands::List => {
+            ModelService::get_model_list(&db).await?;
+        }
+        Commands::Delete(model_args) => {
+            let model_name = model_args.model.clone();
+            ModelService::delete_model(&db, &model_name.unwrap()).await?;
+        }
+        Commands::Read(model_args) => {
+            // let model_name = model_args.model.clone();
+            ModelService::read_data(&db).await?;
         }
     }
 

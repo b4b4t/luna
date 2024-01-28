@@ -1,9 +1,12 @@
 use async_std::net::TcpStream;
-use std::{any::Any, collections::HashMap, env};
+use std::env;
 use tiberius::{Client, ColumnData, Config};
 
 use crate::{
-    core::dto::{Column, ColumnValue, ForeignKey, Table},
+    core::{
+        dao::{column::ColumnDao, table::TableDao},
+        dto::{ColumnValue, ForeignKey},
+    },
     println_error,
 };
 
@@ -23,9 +26,9 @@ pub async fn get_client() -> anyhow::Result<Client<TcpStream>> {
     Ok(client)
 }
 
-pub async fn get_tables() -> anyhow::Result<Vec<Table>> {
+pub async fn get_tables() -> anyhow::Result<Vec<TableDao>> {
     let mut client = get_client().await?;
-    let mut tables = Vec::<Table>::new();
+    let mut tables = Vec::<TableDao>::new();
     let query = "SELECT * FROM sys.tables where type_desc = 'USER_TABLE' order by name";
 
     let rows = client
@@ -36,15 +39,15 @@ pub async fn get_tables() -> anyhow::Result<Vec<Table>> {
 
     for row in rows {
         let name: &str = row.get("name").unwrap();
-        tables.push(Table::new(name.to_string()));
+        tables.push(TableDao::new(name.to_string()));
     }
 
     Ok(tables)
 }
 
-pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
+pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
     let mut client = get_client().await?;
-    let mut columns = Vec::<Column>::new();
+    let mut columns = Vec::<ColumnDao>::new();
     let query = "
         select 
             t.name as table_name, 
@@ -98,7 +101,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
             )),
             None => None,
         };
-        columns.push(Column::new(
+        columns.push(ColumnDao::new(
             column_name.to_string(),
             table_name.to_string(),
             type_name.to_string(),
@@ -111,7 +114,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<Column>> {
     Ok(columns)
 }
 
-pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<ColumnValue>> {
+pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnValue>>> {
     let mut client = get_client().await?;
     let rows = client
         .query(query, &[&1i32])
@@ -119,20 +122,25 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<ColumnValue>>
         .into_first_result()
         .await?;
 
-    let mut data: Vec<ColumnValue> = Vec::new();
+    let mut data: Vec<Vec<ColumnValue>> = Vec::new();
     let mut line = 0;
+    // Read rows
     for row in rows {
-        line = line + 1;
+        line += 1;
         let mut column = 0;
+        let mut row_data: Vec<ColumnValue> = Vec::new();
+        // Read columns
         for col in row {
-            column = column + 1;
+            column += 1;
+            // Convert to column value
             match to_column_value(col) {
                 Ok(value) => {
-                    data.push(value);
+                    row_data.push(value);
                 }
                 Err(error) => println_error!("[{}][{}] : {}", line, column, error),
             }
         }
+        data.push(row_data);
     }
 
     Ok(data)

@@ -13,6 +13,9 @@ pub enum Commands {
     Import,
     Export(ModelArgs),
     Fetch(ModelArgs),
+    List,
+    Delete(ModelArgs),
+    Read(ModelArgs),
 }
 
 #[derive(Args)]
