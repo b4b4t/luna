@@ -32,6 +32,17 @@ impl Column {
         }
     }
 
+    pub fn from_dao(column: &ColumnDao) -> Self {
+        Self {
+            column_name: column.column_name.clone(),
+            table_name: Some(column.table_name.clone()),
+            type_name: Some(column.type_name.clone()),
+            precision: Some(column.precision),
+            max_length: Some(column.max_length),
+            foreign_key: column.foreign_key.clone(),
+        }
+    }
+
     pub fn get_column_name(&self) -> &str {
         return &self.column_name;
     }

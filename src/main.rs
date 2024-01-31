@@ -32,8 +32,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Export(model_args) => {
             let model_name = model_args.model.clone().unwrap();
-            ModelService::check_model(&model_name).await?;
-            ModelService::export_data(&db, &Model::new(&model_name)).await?;
+            ModelService::export_data(&db, &model_name).await?;
         }
         Commands::Fetch(model_args) => {
             let model_name = model_args.model.clone();

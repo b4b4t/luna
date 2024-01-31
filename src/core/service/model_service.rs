@@ -9,9 +9,9 @@ use surrealdb::{engine::local::Db, opt::PatchOp, Surreal};
 use crate::{
     core::{
         dao::{column::ColumnDao, model::ModelDao},
-        dto::{model::Model, table::Table},
+        dto::{column::Column, model::Model, table::Table},
     },
-    println_error, println_success,
+    println_error, println_success, println_warning,
     sqlserver::{
         execute_data_query, get_columns, get_tables,
         query_builder::{DataQueryBuilder, Query},
@@ -45,60 +45,23 @@ impl ModelService {
         Ok(())
     }
 
-    pub async fn check_model(model_name: &str) -> anyhow::Result<()> {
+    pub async fn export_data(db: &Surreal<Db>, model_name: &str) -> anyhow::Result<()> {
         // Get db model
         let db_model = build_model_from_database(model_name).await?;
+
         // Get file model
-        let file_model = read_model_from_file(model_name)?;
+        let mut file_model = read_model_from_file(model_name)?;
 
-        println!("Checking tables :");
-        // Check tables present in the file
-        for table in file_model.get_tables() {
-            let db_table = db_model.get(table.get_table_name());
+        // Check the model
+        check_model(&db_model, &file_model).await?;
 
-            match db_table {
-                Some(t) => {
-                    let table_name = t.name;
-                    println_success!("{} -> Ok", table_name);
-
-                    // Check columns
-                    let columns = table.get_columns_iter();
-                    if columns.is_some() {
-                        for column in columns.unwrap() {
-                            let db_column = table.get_column(column.get_column_name());
-                            match db_column {
-                                Some(c) => {
-                                    println_success!(
-                                        "{} -- {} -> Ok",
-                                        table_name,
-                                        c.get_column_name()
-                                    );
-                                }
-                                None => println_error!(
-                                    "{} -- {} -> Ko : Missing column in database",
-                                    table_name,
-                                    column.get_column_name()
-                                ),
-                            }
-                        }
-                    }
-                }
-                None => println_error!(
-                    "{} -> Ko : Missing table in database",
-                    table.get_table_name()
-                ),
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn export_data(db: &Surreal<Db>, model: &Model) -> anyhow::Result<()> {
-        let current: DateTime<Local> = Local::now();
-        let snapshot_name = current.format("%Y-%m-%d_%H:%M:%S").to_string();
+        // Fill columns in the file model
+        fill_table_columns(&db_model, &mut file_model);
 
         // Save model
-        let model_dao = model.to_dao();
+        let current: DateTime<Local> = Local::now();
+        let snapshot_name = current.format("%Y-%m-%d_%H:%M:%S").to_string();
+        let model_dao = file_model.to_dao();
         let _: Option<ModelDao> = db
             .create(("model", &snapshot_name))
             .content(model_dao)
@@ -106,7 +69,7 @@ impl ModelService {
 
         // Get data from model
         let mut table_idx = 0;
-        for t in model.get_tables() {
+        for t in file_model.get_tables() {
             // Create query
             let columns = t
                 .get_columns_iter()
@@ -221,6 +184,7 @@ async fn build_model_from_database(model_name: &str) -> anyhow::Result<ModelDao>
         for column in &columns {
             if column.table_name == table.name {
                 t_columns.push(column.clone());
+                println!("Table : {}, Col: {}", column.table_name, column.column_name);
             }
         }
     }
@@ -233,4 +197,88 @@ async fn build_model_from_database(model_name: &str) -> anyhow::Result<ModelDao>
     }
 
     Ok(model)
+}
+
+async fn check_model(db_model: &ModelDao, file_model: &Model) -> anyhow::Result<()> {
+    println!("Checking tables :");
+    // Check tables present in the file
+    for table in file_model.get_tables() {
+        let db_table = db_model.get(table.get_table_name());
+
+        match db_table {
+            Some(t) => {
+                let table_name = t.name;
+                // println_success!("{} -> Ok", table_name);
+
+                // Check columns
+                let columns = table.get_columns_iter();
+                if columns.is_some() {
+                    for column in columns.unwrap() {
+                        let db_column = table.get_column(column.get_column_name());
+                        match db_column {
+                            Some(c) => {
+                                println_success!("{} -- {} -> Ok", table_name, c.get_column_name());
+                            }
+                            None => println_error!(
+                                "{} -- {} -> Ko : Missing column in database",
+                                table_name,
+                                column.get_column_name()
+                            ),
+                        }
+                    }
+                }
+            }
+            None => println_error!(
+                "{} -> Ko : Missing table in database",
+                table.get_table_name()
+            ),
+        }
+    }
+
+    Ok(())
+}
+
+fn fill_table_columns(db_model: &ModelDao, file_model: &mut Model) {
+    // Check tables present in the file
+    for table in file_model.get_tables() {
+        match db_model.get(table.get_table_name()) {
+            Some(t) => {
+                if t.columns.is_none() {
+                    println_warning!("No column found in {}", t.name);
+                    return;
+                }
+
+                let mut miss_columns = Vec::new();
+                // Add missing columns in the model table
+                for db_column in t.columns.unwrap().values() {
+                    // Find the column in the target model
+                    let column = table
+                        .get_columns_iter()
+                        .unwrap()
+                        .find(|col| col.get_column_name() == db_column.column_name);
+                    // Add the column if not found in the model
+                    match column {
+                        Some(c) => {
+                            if c.get_type_name() != db_column.type_name {
+                                println_warning!(
+                                    "Type are different [{}].[{}] - Found : {}, expected : {}",
+                                    t.name,
+                                    db_column.column_name,
+                                    db_column.type_name,
+                                    c.get_type_name()
+                                );
+                            }
+                        }
+                        None => {
+                            miss_columns.push(Column::from_dao(db_column));
+                        }
+                    }
+                }
+            }
+            None => println_error!(
+                "{} -> Ko : Missing table in database",
+                table.get_table_name()
+            ),
+        }
+    }
 }

@@ -8,7 +8,7 @@ macro_rules! println_error {
 #[macro_export]
 macro_rules! println_warning {
     ($($arg:tt)*) => {
-        println!("{}", ansi_term::Colour::Orange.paint(format!($($arg)*)))
+        println!("{}", ansi_term::Colour::Yellow.paint(format!($($arg)*)))
     };
 }
 

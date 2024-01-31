@@ -116,6 +116,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
 
 pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnValue>>> {
     let mut client = get_client().await?;
+    println!("Execute query : {}", query);
     let rows = client
         .query(query, &[&1i32])
         .await?
@@ -135,6 +136,7 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnVal
             // Convert to column value
             match to_column_value(col) {
                 Ok(value) => {
+                    println!("{}", value);
                     row_data.push(value);
                 }
                 Err(error) => println_error!("[{}][{}] : {}", line, column, error),
