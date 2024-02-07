@@ -10,13 +10,15 @@ use crate::{
     core::{
         dao::{column::ColumnDao, model::ModelDao},
         dto::{column::Column, model::Model, table::Table},
+        service::sqlserver::{
+            execute_data_query,
+            query_builder::{DataQueryBuilder, Query},
+        },
     },
     println_error, println_success, println_warning,
-    sqlserver::{
-        execute_data_query, get_columns, get_tables,
-        query_builder::{DataQueryBuilder, Query},
-    },
 };
+
+use super::sqlserver::{get_columns, get_tables};
 
 pub struct ModelService;
 
@@ -45,6 +47,7 @@ impl ModelService {
         Ok(())
     }
 
+    /// Export the data of the database into a surrealdb model
     pub async fn export_data(db: &Surreal<Db>, model_name: &str) -> anyhow::Result<()> {
         // Get db model
         let db_model = build_model_from_database(model_name).await?;
@@ -53,7 +56,13 @@ impl ModelService {
         let mut file_model = read_model_from_file(model_name)?;
 
         // Check the model
-        check_model(&db_model, &file_model).await?;
+        match check_model(&db_model, &file_model).await {
+            Ok(_) => println_success!("Model is ok"),
+            Err(err) => println_error!(
+                "Error : database and file models are not matching => {}",
+                err
+            ),
+        };
 
         // Fill columns in the file model
         fill_table_columns(&db_model, &mut file_model);
@@ -68,36 +77,41 @@ impl ModelService {
             .await?;
 
         // Get data from model
-        let mut table_idx = 0;
+        println!("Exporting data :");
+        // let mut table_idx = 0;
         for t in file_model.get_tables() {
             // Create query
             let columns = t
-                .get_columns_iter()
+                .get_columns()
                 .expect("Columns must be fetched")
+                .iter()
                 .map(|c| c.get_column_name().to_string())
                 .collect::<Vec<String>>();
 
             let query = DataQueryBuilder::new(t.get_table_name(), &columns).build();
 
             // Fetch data
+            println!("Fetching data :");
             let rows = execute_data_query(&query).await?;
 
             // Print values
-            for column in columns {
-                print!(" {: <10} |", column);
-            }
-            for row in &rows {
-                println!("|");
-                for row_col in row {
-                    print!(" {: <10} |", row_col);
-                }
-            }
+            // println!("|");
+            // for column in columns {
+            //     print!(" {: <10} |", column);
+            // }
+            // for row in &rows {
+            //     println!("|");
+            //     for row_col in row {
+            //         print!(" {: <10} |", row_col);
+            //     }
+            // }
 
             // Save data
-            let patch = PatchOp::add(&format!("/tables/{}/rows/-", table_idx), rows);
+            println!("Saving {} data in model :", t.get_table_name());
+            let patch = PatchOp::add(&format!("/tables/{}/rows", t.get_table_name()), rows);
             let _: Option<ModelDao> = db.update(("model", &snapshot_name)).patch(patch).await?;
 
-            table_idx += 1;
+            // table_idx += 1;
         }
 
         println_success!("Data saved successfully");
@@ -184,14 +198,14 @@ async fn build_model_from_database(model_name: &str) -> anyhow::Result<ModelDao>
         for column in &columns {
             if column.table_name == table.name {
                 t_columns.push(column.clone());
-                println!("Table : {}, Col: {}", column.table_name, column.column_name);
+                // println!("Table : {}, Col: {}", column.table_name, column.column_name);
             }
         }
+        table.add_columns(t_columns);
     }
 
+    // Add tables in a new model
     let mut model = ModelDao::new(model_name);
-
-    // Add tables in the model
     for table in tables {
         model.add(table);
     }
@@ -199,6 +213,7 @@ async fn build_model_from_database(model_name: &str) -> anyhow::Result<ModelDao>
     Ok(model)
 }
 
+/// Check a model with a database model
 async fn check_model(db_model: &ModelDao, file_model: &Model) -> anyhow::Result<()> {
     println!("Checking tables :");
     // Check tables present in the file
@@ -211,7 +226,7 @@ async fn check_model(db_model: &ModelDao, file_model: &Model) -> anyhow::Result<
                 // println_success!("{} -> Ok", table_name);
 
                 // Check columns
-                let columns = table.get_columns_iter();
+                let columns = table.get_columns();
                 if columns.is_some() {
                     for column in columns.unwrap() {
                         let db_column = table.get_column(column.get_column_name());
@@ -238,9 +253,10 @@ async fn check_model(db_model: &ModelDao, file_model: &Model) -> anyhow::Result<
     Ok(())
 }
 
+/// Fill a model with a database model
 fn fill_table_columns(db_model: &ModelDao, file_model: &mut Model) {
     // Check tables present in the file
-    for table in file_model.get_tables() {
+    for table in file_model.get_tables_mut() {
         match db_model.get(table.get_table_name()) {
             Some(t) => {
                 if t.columns.is_none() {
@@ -252,10 +268,7 @@ fn fill_table_columns(db_model: &ModelDao, file_model: &mut Model) {
                 // Add missing columns in the model table
                 for db_column in t.columns.unwrap().values() {
                     // Find the column in the target model
-                    let column = table
-                        .get_columns_iter()
-                        .unwrap()
-                        .find(|col| col.get_column_name() == db_column.column_name);
+                    let column = table.get_column(&db_column.column_name);
                     // Add the column if not found in the model
                     match column {
                         Some(c) => {
@@ -270,10 +283,12 @@ fn fill_table_columns(db_model: &ModelDao, file_model: &mut Model) {
                             }
                         }
                         None => {
+                            // println!("Add missing column {}", db_column.column_name);
                             miss_columns.push(Column::from_dao(db_column));
                         }
                     }
                 }
+                table.add_columns(miss_columns);
             }
             None => println_error!(
                 "{} -> Ko : Missing table in database",

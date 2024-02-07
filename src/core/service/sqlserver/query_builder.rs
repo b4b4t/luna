@@ -21,9 +21,11 @@ impl Query for DataQueryBuilder {
         let mut query: String = String::from("select ");
 
         for column in &self.columns {
-            query.push_str(&format!("{}, ", column));
+            query.push_str(&format!("[{}], ", column));
         }
 
+        // Remove last ,
+        query.remove(query.len() - 2);
         query.push_str(&format!("from {}", self.table));
 
         return query;

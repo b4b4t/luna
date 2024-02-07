@@ -1,7 +1,6 @@
 use super::{column::Column, ColumnValue};
 use crate::core::dao::table::TableDao;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
@@ -13,7 +12,7 @@ pub struct Table {
     #[serde(skip_serializing_if = "Option::is_none")]
     skip: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    columns: Option<HashMap<String, Column>>,
+    columns: Option<Vec<Column>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     rows: Option<Vec<Vec<ColumnValue>>>,
 }
@@ -46,37 +45,24 @@ impl Table {
     }
 
     pub fn add_columns(&mut self, columns: Vec<Column>) {
-        let mut cols: HashMap<String, Column> = HashMap::new();
-
-        for col in columns {
-            cols.insert(col.get_table_name().to_string(), col);
-        }
-
-        self.columns = Some(cols);
+        self.columns = Some(columns);
     }
 
-    pub fn get_columns_iter(
-        &self,
-    ) -> Option<std::collections::hash_map::Values<'_, String, Column>> {
+    pub fn get_columns(&self) -> Option<&Vec<Column>> {
+        self.columns.as_ref()
+    }
+
+    pub fn get_column(&self, column_name: &str) -> Option<&Column> {
         if self.columns.is_none() {
             return None;
         }
 
-        Some(self.columns.as_ref().unwrap().values())
-    }
-
-    pub fn get_column(&self, column_name: &str) -> Option<Column> {
-        if self.columns.is_none() {
-            return None;
-        }
-
-        let columns = self.columns.as_ref().unwrap();
-
-        if columns.contains_key(column_name) {
-            return Some(columns[column_name].clone());
-        }
-
-        None
+        return self
+            .columns
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|c| c.get_column_name() == column_name);
     }
 
     pub fn get_rows(&self) -> Option<&Vec<Vec<ColumnValue>>> {
@@ -84,14 +70,13 @@ impl Table {
     }
 
     pub fn to_dao(&self) -> TableDao {
-        let mut table = TableDao::new(self.name.clone());
+        let mut table = TableDao::new(&self.name);
 
         // Convert columns
         let mut columns = Vec::new();
         self.columns
             .as_ref()
             .expect("Table must have columns")
-            .values()
             .into_iter()
             .for_each(|column| {
                 columns.push(column.to_dao());

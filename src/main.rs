@@ -1,6 +1,5 @@
 use clap::Parser;
 use command::{Cli, Commands};
-use core::dto::model::Model;
 use core::service::model_service::ModelService;
 use dotenv::dotenv;
 use surrealdb::engine::local::RocksDb;
@@ -9,7 +8,6 @@ use surrealdb::Surreal;
 
 mod command;
 mod core;
-mod sqlserver;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

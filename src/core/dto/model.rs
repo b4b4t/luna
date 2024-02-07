@@ -24,6 +24,10 @@ impl Model {
         &self.tables
     }
 
+    pub fn get_tables_mut(&mut self) -> &mut Vec<Table> {
+        &mut self.tables
+    }
+
     pub fn get_model_name(&self) -> &str {
         &self.name
     }

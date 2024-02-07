@@ -1,7 +1,3 @@
-use async_std::net::TcpStream;
-use std::env;
-use tiberius::{Client, ColumnData, Config};
-
 use crate::{
     core::{
         dao::{column::ColumnDao, table::TableDao},
@@ -9,6 +5,12 @@ use crate::{
     },
     println_error,
 };
+use ::chrono::NaiveDateTime;
+use rust_decimal::Decimal;
+use std::{env, str::FromStr};
+use tiberius::{Client, ColumnData, Config, FromSql};
+use tokio::net::TcpStream;
+use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
 pub mod query_builder;
 
@@ -16,12 +18,13 @@ pub fn get_connection_string() -> String {
     env::var("CONNECTION_STRING").expect("CONNECTION_STRING must be set")
 }
 
-pub async fn get_client() -> anyhow::Result<Client<TcpStream>> {
+pub async fn get_client() -> anyhow::Result<Client<Compat<TcpStream>>> {
     let connection_string = get_connection_string();
     let config = Config::from_ado_string(&connection_string)?;
+
     let tcp = TcpStream::connect(config.get_addr()).await?;
     tcp.set_nodelay(true)?;
-    let client = Client::connect(config, tcp).await?;
+    let client = Client::connect(config, tcp.compat_write()).await?;
 
     Ok(client)
 }
@@ -39,7 +42,7 @@ pub async fn get_tables() -> anyhow::Result<Vec<TableDao>> {
 
     for row in rows {
         let name: &str = row.get("name").unwrap();
-        tables.push(TableDao::new(name.to_string()));
+        tables.push(TableDao::new(name));
     }
 
     Ok(tables)
@@ -116,8 +119,9 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
 
 pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnValue>>> {
     let mut client = get_client().await?;
-    println!("Execute query : {}", query);
-    let rows = client
+    // println!("query : {}", query);
+    // println!("Execute query : {}", query);
+    let rows: Vec<tiberius::Row> = client
         .query(query, &[&1i32])
         .await?
         .into_first_result()
@@ -130,13 +134,14 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnVal
         line += 1;
         let mut column = 0;
         let mut row_data: Vec<ColumnValue> = Vec::new();
+        // println!("line : {}", line);
         // Read columns
         for col in row {
             column += 1;
+            // println!("column : {}", column);
             // Convert to column value
             match to_column_value(col) {
                 Ok(value) => {
-                    println!("{}", value);
                     row_data.push(value);
                 }
                 Err(error) => println_error!("[{}][{}] : {}", line, column, error),
@@ -148,8 +153,9 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnVal
     Ok(data)
 }
 
-fn to_column_value(column_data: ColumnData) -> anyhow::Result<ColumnValue> {
-    match column_data {
+fn to_column_value(column_data: ColumnData<'static>) -> anyhow::Result<ColumnValue> {
+    let data = column_data.clone();
+    match data {
         ColumnData::Bit(value) => Ok(ColumnValue::Bool(value)),
         ColumnData::F32(value) => Ok(ColumnValue::Float(value)),
         ColumnData::F64(value) => Ok(ColumnValue::BigFloat(value)),
@@ -164,6 +170,40 @@ fn to_column_value(column_data: ColumnData) -> anyhow::Result<ColumnValue> {
             };
 
             Ok(ColumnValue::String(string_value))
+        }
+        ColumnData::Binary(_) => Err(anyhow::anyhow!("Cannot convert binary value")),
+        ColumnData::DateTime2(value) => {
+            let datetime = match value {
+                Some(_) => NaiveDateTime::from_sql(&column_data)
+                    .expect("Cannot convert Datetime2 to NaiveDateTime"),
+                None => None,
+            };
+            Ok(ColumnValue::DateTime2(datetime))
+        }
+        ColumnData::DateTimeOffset(value) => {
+            let datetime = match value {
+                Some(_) => NaiveDateTime::from_sql(&column_data)
+                    .expect("Cannot convert DateTimeOffset to NaiveDateTime"),
+                None => None,
+            };
+            Ok(ColumnValue::DateTimeOffset(datetime))
+        }
+        ColumnData::Guid(value) => {
+            let guid = match value {
+                Some(val) => Some(
+                    surrealdb::sql::Uuid::from_str(&val.to_string())
+                        .expect("Cannot convert guid to uuid"),
+                ),
+                None => None,
+            };
+            Ok(ColumnValue::Uuid(guid))
+        }
+        ColumnData::Numeric(value) => {
+            let numeric = match value {
+                Some(_) => Decimal::from_sql(&column_data).expect("Cannot convert to Decimal"),
+                None => None,
+            };
+            Ok(ColumnValue::Decimal(numeric))
         }
         _ => Err(anyhow::anyhow!("Column data not handled")),
     }

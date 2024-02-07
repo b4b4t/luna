@@ -13,9 +13,9 @@ pub struct TableDao {
 }
 
 impl TableDao {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: &str) -> Self {
         Self {
-            name,
+            name: name.to_string(),
             columns: None,
             rows: None,
         }
@@ -25,7 +25,7 @@ impl TableDao {
         let mut cols: HashMap<String, ColumnDao> = HashMap::new();
 
         for col in columns {
-            cols.insert(col.table_name.clone(), col);
+            cols.insert(col.column_name.clone(), col);
         }
 
         self.columns = Some(cols);
