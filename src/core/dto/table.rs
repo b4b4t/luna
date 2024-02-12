@@ -1,9 +1,11 @@
 use super::{column::Column, ColumnValue};
 use crate::core::dao::table::TableDao;
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
+    id: Option<Thing>,
     name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     condition: Option<String>,
@@ -18,24 +20,21 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
-            condition: None,
-            skip: None,
-            take: None,
-            columns: None,
-            rows: None,
-        }
-    }
-
     pub fn from_dao(table: TableDao) -> Self {
+        let columns = table
+            .columns
+            .expect("No column found in the table")
+            .iter()
+            .map(|(_, c)| Column::from_dao(c))
+            .collect::<Vec<Column>>();
+
         Self {
+            id: table.id,
             name: table.name,
             condition: None,
             skip: None,
             take: None,
-            columns: None,
+            columns: Some(columns),
             rows: None,
         }
     }
@@ -63,10 +62,6 @@ impl Table {
             .unwrap()
             .iter()
             .find(|c| c.get_column_name() == column_name);
-    }
-
-    pub fn get_rows(&self) -> Option<&Vec<Vec<ColumnValue>>> {
-        self.rows.as_ref()
     }
 
     pub fn to_dao(&self) -> TableDao {

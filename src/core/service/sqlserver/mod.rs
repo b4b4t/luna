@@ -5,19 +5,22 @@ use crate::{
     },
     println_error,
 };
-use ::chrono::NaiveDateTime;
-use rust_decimal::Decimal;
-use std::{env, str::FromStr};
-use tiberius::{Client, ColumnData, Config, FromSql};
+
+use std::env;
+use tiberius::{Client, Config};
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 
+use self::mappers::to_column_value;
+
+pub mod mappers;
 pub mod query_builder;
 
 pub fn get_connection_string() -> String {
     env::var("CONNECTION_STRING").expect("CONNECTION_STRING must be set")
 }
 
+/// Get a SqlServer client
 pub async fn get_client() -> anyhow::Result<Client<Compat<TcpStream>>> {
     let connection_string = get_connection_string();
     let config = Config::from_ado_string(&connection_string)?;
@@ -29,6 +32,7 @@ pub async fn get_client() -> anyhow::Result<Client<Compat<TcpStream>>> {
     Ok(client)
 }
 
+/// Get all tables of the targeted database
 pub async fn get_tables() -> anyhow::Result<Vec<TableDao>> {
     let mut client = get_client().await?;
     let mut tables = Vec::<TableDao>::new();
@@ -48,6 +52,7 @@ pub async fn get_tables() -> anyhow::Result<Vec<TableDao>> {
     Ok(tables)
 }
 
+/// Get all the columns of the targated table
 pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
     let mut client = get_client().await?;
     let mut columns = Vec::<ColumnDao>::new();
@@ -117,6 +122,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
     Ok(columns)
 }
 
+/// Execute a query on the SqlServer database
 pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnValue>>> {
     let mut client = get_client().await?;
     // println!("query : {}", query);
@@ -151,60 +157,4 @@ pub async fn execute_data_query(query: &str) -> anyhow::Result<Vec<Vec<ColumnVal
     }
 
     Ok(data)
-}
-
-fn to_column_value(column_data: ColumnData<'static>) -> anyhow::Result<ColumnValue> {
-    let data = column_data.clone();
-    match data {
-        ColumnData::Bit(value) => Ok(ColumnValue::Bool(value)),
-        ColumnData::F32(value) => Ok(ColumnValue::Float(value)),
-        ColumnData::F64(value) => Ok(ColumnValue::BigFloat(value)),
-        ColumnData::I16(value) => Ok(ColumnValue::Short(value)),
-        ColumnData::I32(value) => Ok(ColumnValue::Integer(value)),
-        ColumnData::I64(value) => Ok(ColumnValue::Long(value)),
-        ColumnData::U8(value) => Ok(ColumnValue::UnsignedInt(value)),
-        ColumnData::String(value) => {
-            let string_value = match value {
-                Some(cow_value) => Some(cow_value.to_string()),
-                None => None,
-            };
-
-            Ok(ColumnValue::String(string_value))
-        }
-        ColumnData::Binary(_) => Err(anyhow::anyhow!("Cannot convert binary value")),
-        ColumnData::DateTime2(value) => {
-            let datetime = match value {
-                Some(_) => NaiveDateTime::from_sql(&column_data)
-                    .expect("Cannot convert Datetime2 to NaiveDateTime"),
-                None => None,
-            };
-            Ok(ColumnValue::DateTime2(datetime))
-        }
-        ColumnData::DateTimeOffset(value) => {
-            let datetime = match value {
-                Some(_) => NaiveDateTime::from_sql(&column_data)
-                    .expect("Cannot convert DateTimeOffset to NaiveDateTime"),
-                None => None,
-            };
-            Ok(ColumnValue::DateTimeOffset(datetime))
-        }
-        ColumnData::Guid(value) => {
-            let guid = match value {
-                Some(val) => Some(
-                    surrealdb::sql::Uuid::from_str(&val.to_string())
-                        .expect("Cannot convert guid to uuid"),
-                ),
-                None => None,
-            };
-            Ok(ColumnValue::Uuid(guid))
-        }
-        ColumnData::Numeric(value) => {
-            let numeric = match value {
-                Some(_) => Decimal::from_sql(&column_data).expect("Cannot convert to Decimal"),
-                None => None,
-            };
-            Ok(ColumnValue::Decimal(numeric))
-        }
-        _ => Err(anyhow::anyhow!("Column data not handled")),
-    }
 }

@@ -1,23 +1,22 @@
 use super::column::ColumnDao;
-use crate::core::dto::ColumnValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use surrealdb::sql::Thing;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TableDao {
+    pub id: Option<Thing>,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub columns: Option<HashMap<String, ColumnDao>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rows: Option<Vec<Vec<ColumnValue>>>,
 }
 
 impl TableDao {
     pub fn new(name: &str) -> Self {
         Self {
+            id: None,
             name: name.to_string(),
             columns: None,
-            rows: None,
         }
     }
 
@@ -53,9 +52,5 @@ impl TableDao {
         }
 
         None
-    }
-
-    pub fn get_rows(&self) -> Option<&Vec<Vec<ColumnValue>>> {
-        self.rows.as_ref()
     }
 }

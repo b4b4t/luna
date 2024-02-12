@@ -1,5 +1,6 @@
 use clap::Parser;
 use command::{Cli, Commands};
+use core::service::export_service::ExportService;
 use core::service::model_service::ModelService;
 use dotenv::dotenv;
 use surrealdb::engine::local::RocksDb;
@@ -30,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Export(model_args) => {
             let model_name = model_args.model.clone().unwrap();
-            ModelService::export_data(&db, &model_name).await?;
+            ExportService::export_data(&db, &model_name).await?;
         }
         Commands::Fetch(model_args) => {
             let model_name = model_args.model.clone();

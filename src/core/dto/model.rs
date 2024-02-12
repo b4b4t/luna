@@ -1,23 +1,34 @@
 use super::table::Table;
 use crate::core::dao::model::ModelDao;
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
-    name: String,
+    id: Option<Thing>,
+    name: Option<String>,
+    model_name: String,
     tables: Vec<Table>,
 }
 
 impl Model {
-    pub fn new(model_name: &str) -> Self {
+    pub fn new(name: &str, model_name: &str) -> Self {
         Self {
-            name: model_name.to_string(),
+            id: None,
+            name: Some(name.to_string()),
+            model_name: model_name.to_string(),
             tables: Vec::new(),
         }
     }
 
     pub fn add(&mut self, table: Table) {
         self.tables.push(table);
+    }
+
+    pub fn get_table(&self, table_name: &str) -> Option<&Table> {
+        self.tables
+            .iter()
+            .find(|t| t.get_table_name() == table_name)
     }
 
     pub fn get_tables(&self) -> &Vec<Table> {
@@ -28,16 +39,10 @@ impl Model {
         &mut self.tables
     }
 
-    pub fn get_model_name(&self) -> &str {
-        &self.name
-    }
-
     pub fn to_dao(&self) -> ModelDao {
-        let mut model = ModelDao::new(&self.name);
-        for table in &self.tables {
-            model.add(table.to_dao());
-        }
-
-        model
+        ModelDao::new(
+            &self.name.as_ref().unwrap_or(&self.model_name),
+            &self.model_name,
+        )
     }
 }
