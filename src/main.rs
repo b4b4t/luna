@@ -1,4 +1,5 @@
 use clap::Parser;
+use command::delete::DeleteCommand;
 use command::{Cli, Commands};
 use core::service::export_service::ExportService;
 use core::service::model_service::ModelService;
@@ -21,6 +22,15 @@ async fn main() -> anyhow::Result<()> {
     // Surreal::new::<RocksDb>(("~/luna.db", config)).await?;
     let db: Surreal<surrealdb::engine::local::Db> = Surreal::new::<RocksDb>("~/luna.db").await?;
     // Select a specific namespace / database
+
+    // let db: SurrealDb = Surreal::new::<Ws>("127.0.0.1:8000").await?;
+    // db.signin(Root {
+    //     username: "root",
+    //     password: "root",
+    // })
+    // .await
+    // .unwrap();
+
     db.use_ns("luna").use_db("luna").await?;
 
     let cli = Cli::parse();
@@ -40,9 +50,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::List => {
             ModelService::get_model_list(&db).await?;
         }
-        Commands::Delete(model_args) => {
-            let model_name = model_args.model.clone();
-            ModelService::delete_model(&db, &model_name.unwrap()).await?;
+        Commands::Delete => {
+            DeleteCommand::run(&db).await?;
         }
         Commands::Read(model_args) => {
             // let model_name = model_args.model.clone();

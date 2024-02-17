@@ -2,16 +2,16 @@ use std::{
     env,
     fs::{self, OpenOptions},
 };
-
 // use chrono::{DateTime, Local};
-use surrealdb::{engine::local::Db, Surreal};
-
-use crate::core::{
-    dao::model::ModelDao,
-    dto::{model::Model, table::Table},
-};
-
 use super::sqlserver::get_tables;
+use crate::{
+    core::{
+        dao::{model::ModelDao, row::TableRowDao, table::TableDao},
+        data::{model_dal::ModelDal, SurrealDb},
+        dto::{model::Model, table::Table},
+    },
+    println_success,
+};
 
 pub struct ModelService;
 
@@ -40,7 +40,7 @@ impl ModelService {
         Ok(())
     }
 
-    pub async fn read_data(db: &Surreal<Db>) -> anyhow::Result<()> {
+    pub async fn read_data(db: &SurrealDb) -> anyhow::Result<()> {
         // Get model
         let models: Vec<ModelDao> = db.select("model").await?;
 
@@ -79,21 +79,45 @@ impl ModelService {
         Ok(())
     }
 
-    pub async fn get_model_list(db: &Surreal<Db>) -> anyhow::Result<()> {
+    pub async fn get_model_list(db: &SurrealDb) -> anyhow::Result<()> {
         println!("Models :");
-        let models: Vec<ModelDao> = db.select("model").await?;
 
-        for model in models {
+        let models = ModelDal::get_models(db).await?;
+        for model in &models {
             println!("- {}", model.model_name);
         }
 
         Ok(())
     }
 
-    pub async fn delete_model(db: &Surreal<Db>, model_name: &str) -> anyhow::Result<()> {
+    pub async fn get_models(db: &SurrealDb) -> anyhow::Result<Vec<ModelDao>> {
+        ModelDal::get_models(db).await
+    }
+
+    pub async fn delete_model(db: &SurrealDb, model_name: &str) -> anyhow::Result<()> {
+        // Delete values
+        let rows: Vec<TableRowDao> = db
+                    .query(
+                        "DELETE row where row->owns->table->contains->(model where name = $name) RETURN BEFORE",
+                    )
+                    .bind(("name", model_name))
+                    .await?
+                    .take(0)?;
+        println_success!("{} rows deleted", rows.len());
+
+        // Delete tables
+        let tables: Vec<TableDao> = db
+            .query("DELETE table where <-owns<-(model where name = $name) RETURN BEFORE")
+            .bind(("name", model_name))
+            .await?
+            .take(0)?;
+        println_success!("{} tables deleted", tables.len());
+
+        // Delete model
         db.query("DELETE model WHERE name = $name")
             .bind(("name", model_name))
             .await?;
+        println_success!("Model deleted");
 
         Ok(())
     }

@@ -1,11 +1,7 @@
-use std::time::Instant;
-
-use surrealdb::{engine::local::Db, Surreal};
-
 use crate::{
     core::{
         dao::row::TableRowDao,
-        data::{model_dal::ModelDal, table_dal::TableDal, table_row_dal::TableRowDal},
+        data::{model_dal::ModelDal, table_dal::TableDal, table_row_dal::TableRowDal, SurrealDb},
         service::{
             build_model_from_database, check_model, fill_table_columns, read_model_from_file,
             sqlserver::{
@@ -16,12 +12,13 @@ use crate::{
     },
     println_error, println_success,
 };
+use std::time::Instant;
 
 pub struct ExportService {}
 
 impl ExportService {
     /// Export the data of the database into a surrealdb model
-    pub async fn export_data(db: &Surreal<Db>, model_name: &str) -> anyhow::Result<()> {
+    pub async fn export_data(db: &SurrealDb, model_name: &str) -> anyhow::Result<()> {
         // Get db model
         let db_model = build_model_from_database(model_name).await?;
 

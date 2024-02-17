@@ -56,7 +56,7 @@ pub async fn get_tables() -> anyhow::Result<Vec<TableDao>> {
 pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
     let mut client = get_client().await?;
     let mut columns = Vec::<ColumnDao>::new();
-    let query = "
+    let query: &str = "
         select 
             t.name as table_name, 
             c.name as column_name, 

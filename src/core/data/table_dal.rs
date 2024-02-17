@@ -1,12 +1,12 @@
-use surrealdb::{engine::local::Db, sql::Thing, Surreal};
-
+use super::SurrealDb;
 use crate::core::dao::table::TableDao;
+use surrealdb::sql::Thing;
 
 pub struct TableDal {}
 
 impl TableDal {
     // Save a table
-    pub async fn save_table(db: &Surreal<Db>, table_dao: &TableDao) -> anyhow::Result<Thing> {
+    pub async fn save_table(db: &SurrealDb, table_dao: &TableDao) -> anyhow::Result<Thing> {
         let t_record: Vec<TableDao> = db.create("table").content(table_dao).await?;
         let table_id = t_record
             .first()
