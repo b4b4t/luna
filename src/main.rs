@@ -1,5 +1,6 @@
 use clap::Parser;
 use command::delete::DeleteCommand;
+use command::import::ImportCommand;
 use command::{Cli, Commands};
 use core::service::export_service::ExportService;
 use core::service::model_service::ModelService;
@@ -37,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
 
     match &cli.command {
         Commands::Import => {
-            println!("Export");
+            ImportCommand::run(&db).await?;
         }
         Commands::Export(model_args) => {
             let model_name = model_args.model.clone().unwrap();
@@ -53,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Delete => {
             DeleteCommand::run(&db).await?;
         }
-        Commands::Read(model_args) => {
+        Commands::Read => {
             // let model_name = model_args.model.clone();
             ModelService::read_data(&db).await?;
         }

@@ -30,27 +30,27 @@ impl TableDao {
         self.columns = Some(cols);
     }
 
-    pub fn get_columns_iter(
-        &self,
-    ) -> Option<std::collections::hash_map::Values<'_, String, ColumnDao>> {
-        if self.columns.is_none() {
-            return None;
-        }
+    // pub fn get_columns_iter(
+    //     &self,
+    // ) -> Option<std::collections::hash_map::Values<'_, String, ColumnDao>> {
+    //     if self.columns.is_none() {
+    //         return None;
+    //     }
 
-        Some(self.columns.as_ref().unwrap().values())
-    }
+    //     Some(self.columns.as_ref().unwrap().values())
+    // }
 
-    pub fn get_column(&self, column_name: &str) -> Option<ColumnDao> {
-        if self.columns.is_none() {
-            return None;
-        }
+    // pub fn get_column(&self, column_name: &str) -> Option<ColumnDao> {
+    //     if self.columns.is_none() {
+    //         return None;
+    //     }
 
-        let columns = self.columns.as_ref().unwrap();
+    //     let columns = self.columns.as_ref().unwrap();
 
-        if columns.contains_key(column_name) {
-            return Some(columns[column_name].clone());
-        }
+    //     if columns.contains_key(column_name) {
+    //         return Some(columns[column_name].clone());
+    //     }
 
-        None
-    }
+    //     None
+    // }
 }

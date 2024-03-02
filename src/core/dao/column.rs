@@ -9,6 +9,7 @@ pub struct ColumnDao {
     pub precision: u8,
     pub max_length: i16,
     pub foreign_key: Option<ForeignKey>,
+    pub order: i16,
 }
 
 impl ColumnDao {
@@ -19,6 +20,7 @@ impl ColumnDao {
         precision: u8,
         max_length: i16,
         foreign_key: Option<ForeignKey>,
+        order: i16,
     ) -> Self {
         Self {
             column_name,
@@ -27,10 +29,7 @@ impl ColumnDao {
             precision,
             max_length,
             foreign_key,
+            order,
         }
-    }
-
-    pub fn get_column_name(&self) -> &str {
-        return &self.column_name;
     }
 }

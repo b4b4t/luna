@@ -11,26 +11,29 @@ pub struct Column {
     precision: Option<u8>,
     max_length: Option<i16>,
     foreign_key: Option<ForeignKey>,
+    order: i16,
 }
 
 impl Column {
-    pub fn new(
-        column_name: String,
-        table_name: String,
-        type_name: String,
-        precision: u8,
-        max_length: i16,
-        foreign_key: Option<ForeignKey>,
-    ) -> Self {
-        Self {
-            column_name,
-            table_name: Some(table_name),
-            type_name: Some(type_name),
-            precision: Some(precision),
-            max_length: Some(max_length),
-            foreign_key,
-        }
-    }
+    // pub fn new(
+    //     column_name: String,
+    //     table_name: String,
+    //     type_name: String,
+    //     precision: u8,
+    //     max_length: i16,
+    //     foreign_key: Option<ForeignKey>,
+    //     order: i16,
+    // ) -> Self {
+    //     Self {
+    //         column_name,
+    //         table_name: Some(table_name),
+    //         type_name: Some(type_name),
+    //         precision: Some(precision),
+    //         max_length: Some(max_length),
+    //         foreign_key,
+    //         order,
+    //     }
+    // }
 
     pub fn from_dao(column: &ColumnDao) -> Self {
         Self {
@@ -40,6 +43,7 @@ impl Column {
             precision: Some(column.precision),
             max_length: Some(column.max_length),
             foreign_key: column.foreign_key.clone(),
+            order: column.order.clone(),
         }
     }
 
@@ -47,21 +51,25 @@ impl Column {
         return &self.column_name;
     }
 
-    pub fn get_table_name(&self) -> &str {
-        return &self.column_name;
-    }
+    // pub fn get_table_name(&self) -> &str {
+    //     return &self.column_name;
+    // }
 
     pub fn get_type_name(&self) -> &str {
         return &self.column_name;
     }
 
-    pub fn is_foreign_key(&self) -> bool {
-        return self.foreign_key.is_some();
+    pub fn get_order(&self) -> i16 {
+        return self.order;
     }
 
-    pub fn get_foreign_key(&self) -> Option<&ForeignKey> {
-        return self.foreign_key.as_ref();
-    }
+    // pub fn is_foreign_key(&self) -> bool {
+    //     return self.foreign_key.is_some();
+    // }
+
+    // pub fn get_foreign_key(&self) -> Option<&ForeignKey> {
+    //     return self.foreign_key.as_ref();
+    // }
 
     pub fn to_dao(&self) -> ColumnDao {
         ColumnDao::new(
@@ -80,6 +88,7 @@ impl Column {
                 .expect("MIssing max length")
                 .clone(),
             self.foreign_key.clone(),
+            self.order.clone(),
         )
     }
 }

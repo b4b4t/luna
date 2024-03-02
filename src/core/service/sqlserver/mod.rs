@@ -88,6 +88,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
         .into_first_result()
         .await?;
 
+    let mut order = 0;
     for row in rows {
         let column_name: &str = row.get("column_name").unwrap();
         let table_name: &str = row.get("table_name").unwrap();
@@ -116,7 +117,10 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
             precision,
             max_length,
             foreign_key,
+            order,
         ));
+
+        order += 1;
     }
 
     Ok(columns)

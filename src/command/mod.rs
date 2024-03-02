@@ -1,6 +1,7 @@
 use clap::{command, Args, Parser, Subcommand};
 
 pub mod delete;
+pub mod import;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -17,7 +18,7 @@ pub enum Commands {
     Fetch(ModelArgs),
     List,
     Delete,
-    Read(ModelArgs),
+    Read,
 }
 
 #[derive(Args)]

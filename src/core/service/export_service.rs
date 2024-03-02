@@ -45,6 +45,7 @@ impl ExportService {
         let model_id = ModelDal::save_model(db, &model_dao).await?;
 
         // Get data from model
+        println!("--> Fetching data");
         let now: Instant = Instant::now();
         for t in file_model.get_tables() {
             // Save tables
@@ -57,9 +58,10 @@ impl ExportService {
                 .await?;
 
             // Create query
-            let columns = t
-                .get_columns()
-                .expect("Columns must be fetched")
+            let mut columns = t.get_columns().expect("Columns must be fetched").clone();
+            columns.sort_by_key(|c| c.get_order());
+
+            let columns = columns
                 .iter()
                 .map(|c| c.get_column_name().to_string())
                 .collect::<Vec<String>>();
@@ -67,7 +69,6 @@ impl ExportService {
             let query = DataQueryBuilder::new(t.get_table_name(), &columns).build();
 
             // Fetch data
-            println!("--> Fetching data");
             let rows = execute_data_query(&query).await?;
 
             println!(

@@ -46,28 +46,38 @@ pub enum ColumnValue {
 impl fmt::Display for ColumnValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ColumnValue::BigFloat(val) => format_value(f, val),
-            ColumnValue::Bool(val) => format_value(f, val),
-            ColumnValue::DateTime2(val) => format_value(f, val),
-            ColumnValue::DateTimeOffset(val) => format_value(f, val),
-            ColumnValue::Decimal(val) => format_value(f, val),
-            ColumnValue::Float(val) => format_value(f, val),
-            ColumnValue::Integer(val) => format_value(f, val),
-            ColumnValue::Long(val) => format_value(f, val),
-            ColumnValue::Short(val) => format_value(f, val),
-            ColumnValue::String(val) => format_value(f, val),
-            ColumnValue::UnsignedInt(val) => format_value(f, val),
-            ColumnValue::Uuid(val) => format_value(f, val),
+            ColumnValue::BigFloat(val) => format_value(f, val, false),
+            ColumnValue::Bool(val) => format_value(f, val, false),
+            ColumnValue::DateTime2(val) => format_value(f, val, true),
+            ColumnValue::DateTimeOffset(val) => format_value(f, val, true),
+            ColumnValue::Decimal(val) => format_value(f, val, false),
+            ColumnValue::Float(val) => format_value(f, val, false),
+            ColumnValue::Integer(val) => format_value(f, val, false),
+            ColumnValue::Long(val) => format_value(f, val, false),
+            ColumnValue::Short(val) => format_value(f, val, false),
+            ColumnValue::String(val) => format_value(f, val, true),
+            ColumnValue::UnsignedInt(val) => format_value(f, val, false),
+            ColumnValue::Uuid(val) => format_value(f, val, false),
         }
     }
 }
 
-fn format_value<T>(f: &mut fmt::Formatter<'_>, value: &Option<T>) -> Result<(), std::fmt::Error>
+fn format_value<T>(
+    f: &mut fmt::Formatter<'_>,
+    value: &Option<T>,
+    escape: bool,
+) -> Result<(), std::fmt::Error>
 where
     T: Display,
 {
     match value {
-        Some(val) => write!(f, "{}", val),
+        Some(val) => {
+            if !escape {
+                return write!(f, "{}", val);
+            }
+            // Escape sql characters
+            write!(f, "'{}'", format!("{}", val).replace("'", "''"))
+        }
         None => write!(f, "NULL"),
     }
 }

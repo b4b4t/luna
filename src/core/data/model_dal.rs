@@ -19,4 +19,10 @@ impl ModelDal {
 
         Ok(models)
     }
+
+    // pub async fn get_model(db: &SurrealDb, model_id: Thing) -> anyhow::Result<Option<ModelDao>> {
+    //     let model: Option<ModelDao> = db.select(("model", model_id)).await?;
+
+    //     Ok(model)
+    // }
 }
