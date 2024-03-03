@@ -1,18 +1,16 @@
-use std::env;
-
-use crate::{println_error, println_success, println_warning};
-
-use self::sqlserver::{get_columns, get_tables};
-
+use self::sqlserver_provider::{get_columns, get_tables};
 use super::{
     dao::column::ColumnDao,
     dto::{model::Model, table::Table},
 };
+use crate::{println_error, println_success, println_warning};
+use std::env;
 
 pub mod export_service;
+pub mod file_provider;
 pub mod import_service;
 pub mod model_service;
-pub mod sqlserver;
+pub mod sqlserver_provider;
 
 /// Read a model from a file
 fn read_model_from_file(model_name: &str) -> anyhow::Result<Model> {

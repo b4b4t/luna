@@ -13,7 +13,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Import,
+    Import(ModelArgs),
     Export(ModelArgs),
     Fetch(ModelArgs),
     List,
@@ -23,5 +23,8 @@ pub enum Commands {
 
 #[derive(Args)]
 pub struct ModelArgs {
+    #[arg(short, long)]
     pub model: Option<String>,
+    #[arg(short, long)]
+    pub file: Option<String>,
 }

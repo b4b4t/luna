@@ -4,25 +4,29 @@ use crate::{
     core::{
         dao::{column::ColumnDao, row::TableRowDao, table::TableDao},
         data::{table_dal::TableDal, table_row_dal::TableRowDal, SurrealDb},
-        service::sqlserver::query_builder::Query,
+        service::sqlserver_provider::query_builder::Query,
     },
     println_error, println_success,
 };
 
-use super::sqlserver::query_builder::DataInsertQueryBuilder;
+use super::{export_service::Provider, sqlserver_provider::query_builder::DataInsertQueryBuilder};
 
 pub struct ImportService {}
 
 impl ImportService {
-    pub async fn import_data(db: &SurrealDb, model_id: &Thing) -> anyhow::Result<()> {
-        // Get the model
-        // let model = ModelDal::get_model(db, model_id.clone()).await?;
-
+    pub async fn import_data(
+        db: &SurrealDb,
+        model_id: &Thing,
+        provider: &mut Box<dyn Provider>,
+    ) -> anyhow::Result<()> {
         // Get the tables
         let tables = TableDal::get_tables_by_model_id(db, model_id).await?;
 
         // Order tables
         let tables = ImportService::sort_tables(&tables);
+
+        // Open provider connection
+        provider.open_connection()?;
 
         // Get the data by table
         for table in &tables.unwrap() {
@@ -47,10 +51,13 @@ impl ImportService {
                 .into_iter()
                 .map(|r| DataInsertQueryBuilder::new(&table.name, &columns, r.row));
 
+            provider.send(&format!("-- Table {}", table.name))?;
             for insert in insert_queries {
-                println!("{}", insert.build());
+                provider.send(&insert.build())?;
             }
         }
+
+        println_success!("Data imported");
 
         Ok(())
     }
@@ -80,7 +87,6 @@ impl ImportService {
                         // Add the foreign table
                         Some(ft) => {
                             ordered_tables.insert(position, ft.clone());
-                            println_success!("fk {} added", ft.name);
                             position += 1;
                         }
                         None => {
@@ -103,20 +109,12 @@ impl ImportService {
 
             if !any_table_by_name(&ordered_tables, &table.name) {
                 ordered_tables.insert(position, table.clone());
-                println_success!("{} added", table.name);
             }
         }
 
         if !is_success {
             return Err(anyhow::anyhow!("Error when ordering tables"));
         }
-
-        for table in &ordered_tables {
-            println!("{}", table.name);
-        }
-
-        println_success!("nb : {}", tables.len());
-        println_success!("ordered nb : {}", ordered_tables.len());
 
         Ok(ordered_tables)
     }

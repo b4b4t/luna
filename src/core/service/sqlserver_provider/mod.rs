@@ -14,6 +14,7 @@ use tokio_util::compat::{Compat, TokioAsyncWriteCompatExt};
 use self::mappers::to_column_value;
 
 pub mod mappers;
+pub mod provider;
 pub mod query_builder;
 
 pub fn get_connection_string() -> String {

@@ -4,7 +4,7 @@ use crate::{
         data::{model_dal::ModelDal, table_dal::TableDal, table_row_dal::TableRowDal, SurrealDb},
         service::{
             build_model_from_database, check_model, fill_table_columns, read_model_from_file,
-            sqlserver::{
+            sqlserver_provider::{
                 execute_data_query,
                 query_builder::{DataQueryBuilder, Query},
             },
@@ -13,6 +13,11 @@ use crate::{
     println_error, println_success,
 };
 use std::time::Instant;
+
+pub trait Provider {
+    fn open_connection(&mut self) -> anyhow::Result<()>;
+    fn send(&mut self, data: &str) -> anyhow::Result<()>;
+}
 
 pub struct ExportService {}
 

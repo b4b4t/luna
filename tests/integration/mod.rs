@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use luna_core::{self, core::service::sqlserver::get_client};
+use luna_core::{self, core::service::sqlserver_provider::get_client};
 
 #[tokio::test]
 async fn it_works() {

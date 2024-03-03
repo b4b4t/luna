@@ -37,8 +37,9 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Import => {
-            ImportCommand::run(&db).await?;
+        Commands::Import(model_args) => {
+            let file_name = model_args.file.clone();
+            ImportCommand::run(&db, file_name).await?;
         }
         Commands::Export(model_args) => {
             let model_name = model_args.model.clone().unwrap();
