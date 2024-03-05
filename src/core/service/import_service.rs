@@ -1,5 +1,4 @@
-use surrealdb::sql::Thing;
-
+use super::{export_service::Provider, sqlserver_provider::query_builder::DataInsertQueryBuilder};
 use crate::{
     core::{
         dao::{column::ColumnDao, row::TableRowDao, table::TableDao},
@@ -8,8 +7,8 @@ use crate::{
     },
     println_error, println_success,
 };
-
-use super::{export_service::Provider, sqlserver_provider::query_builder::DataInsertQueryBuilder};
+use std::time::Instant;
+use surrealdb::sql::Thing;
 
 pub struct ImportService {}
 
@@ -19,10 +18,11 @@ impl ImportService {
         model_id: &Thing,
         provider: &mut Box<dyn Provider>,
     ) -> anyhow::Result<()> {
+        let now: Instant = Instant::now();
         // Get the tables
         let tables = TableDal::get_tables_by_model_id(db, model_id).await?;
-
         // Order tables
+        println!("--> Sorting tables");
         let tables = ImportService::sort_tables(&tables);
 
         // Open provider connection
@@ -51,13 +51,15 @@ impl ImportService {
                 .into_iter()
                 .map(|r| DataInsertQueryBuilder::new(&table.name, &columns, r.row));
 
+            println!("--> Importing data in table {}", table.name);
             provider.send(&format!("-- Table {}", table.name))?;
             for insert in insert_queries {
                 provider.send(&insert.build())?;
             }
         }
 
-        println_success!("Data imported");
+        let elapsed = now.elapsed();
+        println_success!("Data imported successfully in {:.2?}", elapsed);
 
         Ok(())
     }
@@ -120,14 +122,17 @@ impl ImportService {
     }
 }
 
+/// Find a table by name
 fn find_table_by_name<'a>(tables: &'a Vec<TableDao>, table_name: &str) -> Option<&'a TableDao> {
     tables.iter().find(|t| t.name == table_name)
 }
 
+/// Find a table position by name
 fn position_table_by_name<'a>(tables: &'a Vec<TableDao>, table_name: &str) -> Option<usize> {
     tables.iter().position(|t| t.name == table_name)
 }
 
+/// Check if it exists a table with the specified name
 fn any_table_by_name<'a>(tables: &'a Vec<TableDao>, table_name: &str) -> bool {
     tables.iter().any(|t| t.name == table_name)
 }
