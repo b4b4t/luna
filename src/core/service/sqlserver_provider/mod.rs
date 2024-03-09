@@ -67,10 +67,13 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
             col2.column_id,
             col2.name as fk_col_name,
             tab2.name as fk_table_name,
-            typ2.name as fk_type_name
+            typ2.name as fk_type_name,
+            case when indcol.key_ordinal is not null then 1 else 0 end as is_primary_key
         from sys.columns c 
         join sys.tables t on t.object_id = c.object_id 
         join sys.types as p on c.user_type_id = p.user_type_id 
+        left join sys.indexes ind on ind.object_id = t.object_id and ind.is_primary_key = 1
+        left join sys.index_columns indcol on indcol.object_id = t.object_id and indcol.column_id = c.column_id and ind.index_id = indcol.index_id
         left join sys.foreign_key_columns fkc on fkc.parent_column_id = c.column_id and fkc.parent_object_id = c.object_id
         left join sys.tables tab2
             on tab2.object_id = fkc.referenced_object_id
@@ -99,10 +102,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
         let fk_col_name: Option<&str> = row.get("fk_col_name");
         let fk_table_name: Option<&str> = row.get("fk_table_name");
         let fk_type_name: Option<&str> = row.get("fk_type_name");
-        // println!(
-        //     "Column : {}.{} {} ({},{})",
-        //     table_name, column_name, type_name, max_length, precision
-        // );
+        let is_primary_key: i32 = row.get("is_primary_key").unwrap();
         let foreign_key = match fk_col_name {
             Some(_) => Some(ForeignKey::new(
                 fk_col_name.unwrap().to_string(),
@@ -111,6 +111,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
             )),
             None => None,
         };
+
         columns.push(ColumnDao::new(
             column_name.to_string(),
             table_name.to_string(),
@@ -119,6 +120,7 @@ pub async fn get_columns() -> anyhow::Result<Vec<ColumnDao>> {
             max_length,
             foreign_key,
             order,
+            is_primary_key == 1,
         ));
 
         order += 1;

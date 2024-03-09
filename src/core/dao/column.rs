@@ -10,6 +10,7 @@ pub struct ColumnDao {
     pub max_length: i16,
     pub foreign_key: Option<ForeignKey>,
     pub order: i16,
+    pub is_primary_key: bool,
 }
 
 impl ColumnDao {
@@ -21,6 +22,7 @@ impl ColumnDao {
         max_length: i16,
         foreign_key: Option<ForeignKey>,
         order: i16,
+        is_primary_key: bool,
     ) -> Self {
         Self {
             column_name,
@@ -30,6 +32,7 @@ impl ColumnDao {
             max_length,
             foreign_key,
             order,
+            is_primary_key,
         }
     }
 }

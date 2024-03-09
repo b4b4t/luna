@@ -12,6 +12,7 @@ pub struct Column {
     max_length: Option<i16>,
     foreign_key: Option<ForeignKey>,
     order: i16,
+    is_primary_key: bool,
 }
 
 impl Column {
@@ -43,12 +44,13 @@ impl Column {
             precision: Some(column.precision),
             max_length: Some(column.max_length),
             foreign_key: column.foreign_key.clone(),
-            order: column.order.clone(),
+            order: column.order,
+            is_primary_key: column.is_primary_key,
         }
     }
 
     pub fn get_column_name(&self) -> &str {
-        return &self.column_name;
+        &self.column_name
     }
 
     // pub fn get_table_name(&self) -> &str {
@@ -56,11 +58,15 @@ impl Column {
     // }
 
     pub fn get_type_name(&self) -> &str {
-        return &self.column_name;
+        &self.column_name
     }
 
     pub fn get_order(&self) -> i16 {
-        return self.order;
+        self.order
+    }
+
+    pub fn is_primary_key(&self) -> bool {
+        self.is_primary_key
     }
 
     // pub fn is_foreign_key(&self) -> bool {
@@ -85,10 +91,11 @@ impl Column {
             self.precision.as_ref().expect("Missing precision").clone(),
             self.max_length
                 .as_ref()
-                .expect("MIssing max length")
+                .expect("Missing max length")
                 .clone(),
             self.foreign_key.clone(),
-            self.order.clone(),
+            self.order,
+            self.is_primary_key,
         )
     }
 }

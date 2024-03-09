@@ -5,12 +5,19 @@ use crate::core::{
         sqlserver_provider::provider::SqlServerProvider,
     },
 };
+use clap::Args;
 use inquire::Select;
 
 use crate::core::{
     data::SurrealDb,
     service::{import_service::ImportService, model_service::ModelService},
 };
+
+#[derive(Args)]
+pub struct ImportArgs {
+    #[arg(short, long)]
+    pub file: Option<String>,
+}
 
 pub struct ImportCommand {}
 

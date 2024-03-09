@@ -1,5 +1,7 @@
 use clap::{command, Args, Parser, Subcommand};
 
+use self::import::ImportArgs;
+
 pub mod delete;
 pub mod import;
 
@@ -13,7 +15,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Import(ModelArgs),
+    Import(ImportArgs),
     Export(ModelArgs),
     Fetch(ModelArgs),
     List,
@@ -26,5 +28,7 @@ pub struct ModelArgs {
     #[arg(short, long)]
     pub model: Option<String>,
     #[arg(short, long)]
-    pub file: Option<String>,
+    pub take: Option<u64>,
+    #[arg(short, long)]
+    pub skip: Option<u64>,
 }

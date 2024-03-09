@@ -37,8 +37,8 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Import(model_args) => {
-            let file_name = model_args.file.clone();
+        Commands::Import(import_args) => {
+            let file_name = import_args.file.clone();
             ImportCommand::run(&db, file_name).await?;
         }
         Commands::Export(model_args) => {
@@ -47,7 +47,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Fetch(model_args) => {
             let model_name = model_args.model.clone();
-            ModelService::generate_model(&model_name.unwrap()).await?;
+            let take = model_args.take.clone();
+            let skip = model_args.skip.clone();
+            ModelService::generate_model(&model_name.unwrap(), take, skip).await?;
         }
         Commands::List => {
             ModelService::get_model_list(&db).await?;

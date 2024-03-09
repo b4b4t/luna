@@ -66,12 +66,26 @@ impl ExportService {
             let mut columns = t.get_columns().expect("Columns must be fetched").clone();
             columns.sort_by_key(|c| c.get_order());
 
+            let primary_key = columns
+                .iter()
+                .filter(|c| c.is_primary_key())
+                .map(|c| c.get_column_name().to_string())
+                .collect::<Vec<String>>();
+
             let columns = columns
                 .iter()
                 .map(|c| c.get_column_name().to_string())
                 .collect::<Vec<String>>();
 
-            let query = DataQueryBuilder::new(t.get_table_name(), &columns).build();
+            let query = DataQueryBuilder::new(
+                t.get_table_name(),
+                &columns,
+                primary_key,
+                t.get_skip(),
+                t.get_take(),
+                t.get_predicate(),
+            )
+            .build();
 
             // Fetch data
             let rows = execute_data_query(&query).await?;

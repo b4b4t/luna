@@ -17,7 +17,11 @@ pub struct ModelService;
 
 impl ModelService {
     /// Generate a model file with a database
-    pub async fn generate_model(model_name: &str) -> anyhow::Result<()> {
+    pub async fn generate_model(
+        model_name: &str,
+        take: Option<u64>,
+        skip: Option<u64>,
+    ) -> anyhow::Result<()> {
         let model_path = env::var("MODEL_PATH").expect("CONNECTION_STRING must be set");
 
         fs::create_dir_all(&model_path)?;
@@ -25,7 +29,15 @@ impl ModelService {
         let mut model: Model = Model::new(model_name, model_name);
         let tables = get_tables().await?;
         for table in tables {
-            model.add(Table::from_dao(table));
+            let mut t: Table = Table::from_dao(table);
+            if take.is_some() {
+                t.set_take(take.unwrap());
+            }
+            if skip.is_some() {
+                t.set_skip(skip.unwrap());
+            }
+
+            model.add(t);
         }
 
         let file = OpenOptions::new()

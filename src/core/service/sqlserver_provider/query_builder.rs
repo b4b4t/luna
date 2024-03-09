@@ -7,13 +7,31 @@ pub trait Query {
 pub struct DataQueryBuilder {
     table: String,
     columns: Vec<String>,
+    primary_key: Vec<String>,
+    skip: Option<u64>,
+    take: Option<u64>,
+    predicate: Option<String>,
 }
 
 impl DataQueryBuilder {
-    pub fn new(table: &str, columns: &Vec<String>) -> Self {
+    pub fn new(
+        table: &str,
+        columns: &Vec<String>,
+        primary_key: Vec<String>,
+        skip: Option<u64>,
+        take: Option<u64>,
+        predicate: Option<&String>,
+    ) -> Self {
         Self {
             table: table.to_string(),
             columns: columns.clone(),
+            primary_key,
+            skip,
+            take,
+            predicate: match predicate {
+                Some(p) => Some(p.clone()),
+                None => None,
+            },
         }
     }
 }
@@ -29,6 +47,26 @@ impl Query for DataQueryBuilder {
         // Remove last ,
         query.remove(query.len() - 2);
         query.push_str(&format!("from {}", self.table));
+
+        if self.predicate.is_some() {
+            query.push_str(&format!(" where {}", self.predicate.as_ref().unwrap()));
+        }
+
+        if self.take.is_some() && self.skip.is_some() {
+            // Order by
+            query.push_str(" order by ");
+            for primary_key in &self.primary_key {
+                query.push_str(&format!(" {},", primary_key));
+            }
+            query.remove(query.len() - 1);
+
+            // Offset and fetch next rows
+            query.push_str(&format!(
+                " offset {} rows fetch next {} rows only",
+                self.skip.as_ref().unwrap(),
+                self.take.as_ref().unwrap()
+            ));
+        }
 
         return query;
     }

@@ -5,6 +5,7 @@ use surrealdb::sql::Thing;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Table {
+    #[serde(skip_serializing_if = "Option::is_none")]
     id: Option<Thing>,
     name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -14,6 +15,8 @@ pub struct Table {
     #[serde(skip_serializing_if = "Option::is_none")]
     skip: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    predicate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     columns: Option<Vec<Column>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     rows: Option<Vec<Vec<ColumnValue>>>,
@@ -21,12 +24,14 @@ pub struct Table {
 
 impl Table {
     pub fn from_dao(table: TableDao) -> Self {
-        let columns = table
-            .columns
-            .expect("No column found in the table")
-            .iter()
-            .map(|(_, c)| Column::from_dao(c))
-            .collect::<Vec<Column>>();
+        let columns = match table.columns {
+            Some(cols) => Some(
+                cols.iter()
+                    .map(|(_, c)| Column::from_dao(c))
+                    .collect::<Vec<Column>>(),
+            ),
+            None => None,
+        };
 
         Self {
             id: table.id,
@@ -34,8 +39,9 @@ impl Table {
             condition: None,
             skip: None,
             take: None,
-            columns: Some(columns),
+            columns,
             rows: None,
+            predicate: None,
         }
     }
 
@@ -49,6 +55,26 @@ impl Table {
 
     pub fn get_columns(&self) -> Option<&Vec<Column>> {
         self.columns.as_ref()
+    }
+
+    pub fn get_skip(&self) -> Option<u64> {
+        self.skip
+    }
+
+    pub fn get_take(&self) -> Option<u64> {
+        self.take
+    }
+
+    pub fn set_skip(&mut self, skip: u64) {
+        self.skip = Some(skip);
+    }
+
+    pub fn set_take(&mut self, take: u64) {
+        self.take = Some(take)
+    }
+
+    pub fn get_predicate(&self) -> Option<&String> {
+        self.predicate.as_ref()
     }
 
     pub fn get_column(&self, column_name: &str) -> Option<&Column> {
