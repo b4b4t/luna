@@ -103,7 +103,7 @@ impl ImportService {
                     // If the table is found in the ordered vec, get the position
                     position =
                         match position_table_by_name(&ordered_tables, &foreign_key.table_name) {
-                            Some(t_position) => t_position,
+                            Some(t_position) => t_position + 1,
                             None => ordered_tables.len(),
                         };
                 }

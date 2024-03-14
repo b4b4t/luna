@@ -69,13 +69,13 @@ impl Column {
         self.is_primary_key
     }
 
-    // pub fn is_foreign_key(&self) -> bool {
-    //     return self.foreign_key.is_some();
-    // }
+    pub fn is_foreign_key(&self) -> bool {
+        return self.foreign_key.is_some();
+    }
 
-    // pub fn get_foreign_key(&self) -> Option<&ForeignKey> {
-    //     return self.foreign_key.as_ref();
-    // }
+    pub fn get_foreign_key(&self) -> Option<&ForeignKey> {
+        self.foreign_key.as_ref()
+    }
 
     pub fn to_dao(&self) -> ColumnDao {
         ColumnDao::new(

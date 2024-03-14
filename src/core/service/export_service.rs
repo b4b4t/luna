@@ -2,6 +2,7 @@ use crate::{
     core::{
         dao::row::TableRowDao,
         data::{model_dal::ModelDal, table_dal::TableDal, table_row_dal::TableRowDal, SurrealDb},
+        dto::table::Table,
         service::{
             build_model_from_database, check_model, fill_table_columns, read_model_from_file,
             sqlserver_provider::{
@@ -50,9 +51,11 @@ impl ExportService {
         let model_id = ModelDal::save_model(db, &model_dao).await?;
 
         // Get data from model
+        let tables = ExportService::sort_tables(file_model.get_tables())?;
+
         println!("--> Fetching data");
         let now: Instant = Instant::now();
-        for t in file_model.get_tables() {
+        for t in tables {
             // Save tables
             let table_id = &TableDal::save_table(db, &t.to_dao()).await?;
             // Relate table to the table
@@ -111,4 +114,78 @@ impl ExportService {
         println_success!("Data saved successfully in {:.2?}", elapsed);
         Ok(())
     }
+
+    /// Sort a list of tables
+    pub fn sort_tables(tables: &Vec<Table>) -> anyhow::Result<Vec<Table>> {
+        let mut is_success = true;
+        let mut ordered_tables: Vec<Table> = Vec::new();
+
+        for table in tables.iter() {
+            println!("-> Table {}", table.get_table_name());
+
+            // Get the position
+            let mut position =
+                match position_table_by_name(&ordered_tables, &table.get_table_name()) {
+                    Some(t_position) => t_position,
+                    None => ordered_tables.len(),
+                };
+
+            // Add the foreign tables after
+            for column in table.get_columns().unwrap() {
+                if !column.is_foreign_key() {
+                    continue;
+                }
+                let foreign_key = column.get_foreign_key().unwrap();
+                println!("--> Foreign key {}", column.get_column_name());
+                // Find table to know if was already added
+                if !any_table_by_name(&ordered_tables, &foreign_key.table_name) {
+                    match find_table_by_name(&tables, &foreign_key.table_name) {
+                        // Add the foreign table
+                        Some(ft) => {
+                            ordered_tables.insert(position, ft.clone());
+                        }
+                        None => {
+                            println_error!(
+                                "Cannot find the table {} in the model",
+                                foreign_key.table_name
+                            );
+                            is_success = false;
+                        }
+                    }
+                } else {
+                    // If the table is found in the ordered vec, get the position before
+                    position =
+                        match position_table_by_name(&ordered_tables, &foreign_key.table_name) {
+                            Some(t_position) => t_position,
+                            None => 0,
+                        };
+                }
+            }
+
+            if !any_table_by_name(&ordered_tables, &table.get_table_name()) {
+                ordered_tables.insert(position, table.clone());
+            }
+        }
+
+        if !is_success {
+            return Err(anyhow::anyhow!("Error when ordering tables"));
+        }
+
+        Ok(ordered_tables)
+    }
+}
+
+/// Find a table by name
+fn find_table_by_name<'a>(tables: &'a Vec<Table>, table_name: &str) -> Option<&'a Table> {
+    tables.iter().find(|t| t.get_table_name() == table_name)
+}
+
+/// Find a table position by name
+fn position_table_by_name<'a>(tables: &'a Vec<Table>, table_name: &str) -> Option<usize> {
+    tables.iter().position(|t| t.get_table_name() == table_name)
+}
+
+/// Check if it exists a table with the specified name
+fn any_table_by_name<'a>(tables: &'a Vec<Table>, table_name: &str) -> bool {
+    tables.iter().any(|t| t.get_table_name() == table_name)
 }
