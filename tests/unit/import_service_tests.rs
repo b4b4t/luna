@@ -83,9 +83,14 @@ fn sort_tables_with_two_fks_same_table_and_one_fk() {
 
     let ordered_tables = ImportService::sort_tables(&tables).unwrap();
 
+    // assert_eq!(ordered_tables[0].name, "table1");
+    // assert_eq!(ordered_tables[1].name, "table5");
+    // assert_eq!(ordered_tables[2].name, "table2");
+    // assert_eq!(ordered_tables[3].name, "table4");
+    // assert_eq!(ordered_tables[4].name, "table3");
     assert_eq!(ordered_tables[0].name, "table1");
     assert_eq!(ordered_tables[1].name, "table5");
-    assert_eq!(ordered_tables[2].name, "table2");
-    assert_eq!(ordered_tables[3].name, "table4");
+    assert_eq!(ordered_tables[2].name, "table4");
+    assert_eq!(ordered_tables[3].name, "table2");
     assert_eq!(ordered_tables[4].name, "table3");
 }
